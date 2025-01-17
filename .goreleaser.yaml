@@ -1,0 +1,64 @@
+version: 2
+
+env:
+  - GITHUB_WORKFLOW={{ if index .Env "GITHUB_WORKFLOW"  }}{{ .Env.GITHUB_WORKFLOW }}{{ else }}unknown{{ end }}
+  - GITHUB_RUN_ID={{ if index .Env "GITHUB_RUN_ID"  }}{{ .Env.GITHUB_RUN_ID }}{{ else }}unknown{{ end }}
+
+before:
+  hooks:
+    - go mod download
+builds:
+  - main: ./cmd/github-notifications
+    id: "github-notifications"
+    binary: "template-application"
+    ldflags:
+      - -s
+      - -w
+      - -X 'main.version={{.Version}}'
+      - -X 'main.commit={{.ShortCommit}}'
+      - -X 'main.date={{.Date}}'
+      - -X 'main.binName={{.Binary}}'
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: bin
+    format: binary
+    builds:
+    - github-notifications
+    name_template: "${{ .Binary }}_${{ .Version }}_${{ .Os }}-${{ .Arch }}${{ if .Arm }}v${{ .Arm }}${{ end }}${{ if .Mips }}_${{ .Mips }}${{ end }}"
+  - id: tar
+    format: tar.gz
+    builds:
+    - github-notifications
+
+checksum:
+  name_template: 'sha256sums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-devel"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^hack:'
+      - '^chore:'
+      - '^Merge pull request'
+
+nfpms:
+- maintainer: Marco Siebecke <marco@siebecke.se>
+  description: gh notifications reader for the cli
+  homepage: https://github.com/gentoomaniac/github-notifications
+  license: MIT
+  formats:
+  - deb
