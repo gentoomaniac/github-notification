@@ -19,7 +19,7 @@ type Github struct {
 
 func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	options := &github.NotificationListOptions{
-		All: true,
+		All: false,
 		ListOptions: github.ListOptions{
 			Page: 0,
 		},
