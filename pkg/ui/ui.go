@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"log"
 	"os/exec"
 	"strings"
@@ -55,7 +56,7 @@ func (u *Ui) Run(notifications []*github.Notification) {
 		return event
 	})
 
-	if err := app.SetRoot(layout, true).EnableMouse(true).Run(); err != nil {
+	if err := app.SetRoot(layout, true).EnableMouse(false).Run(); err != nil {
 		panic(err)
 	}
 }
@@ -77,7 +78,7 @@ func (u *Ui) Details() *tview.Form {
 func (u *Ui) updateDetails(notification *github.Notification) {
 	u.details.SetTitle(*notification.Repository.FullName)
 	u.details.GetFormItemByLabel("Title").(*tview.TextView).SetText(strings.Join([]string{unread[*notification.Unread], *notification.Subject.Title}, " "))
-	u.details.GetFormItemByLabel("URL").(*tview.TextView).SetText(*notification.Subject.URL)
+	u.details.GetFormItemByLabel("URL").(*tview.TextView).SetText(getHtmlUrl(notification))
 }
 
 func (u *Ui) Notifications(notifications []*github.Notification) *tview.Table {
@@ -103,7 +104,7 @@ func (u *Ui) Notifications(notifications []*github.Notification) *tview.Table {
 	}
 	table.Select(0, 0).SetFixed(1, 1).SetSelectedFunc(func(row int, column int) {
 		// TODO: make configurable
-		go browser("google-chrome-stable", *notifications[row].Subject.URL)
+		go browser("google-chrome-stable", getHtmlUrl(notifications[row]))
 	}).SetSelectionChangedFunc(func(row int, column int) {
 		u.updateDetails(notifications[row])
 	})
@@ -117,6 +118,11 @@ func browser(binary string, arg ...string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getHtmlUrl(n *github.Notification) string {
+	fields := strings.Split(*n.Subject.URL, "/")
+	return fmt.Sprintf("https://github.com/%s/pull/%s", *n.Repository.FullName, fields[len(fields)-1])
 }
 
 func markRead(n *github.Notification) {}
