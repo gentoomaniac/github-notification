@@ -19,6 +19,8 @@ var unread = map[bool]string{
 var symbols = map[string]string{
 	"review_requested": "\uf407",
 	"author":           "\uf415",
+	"state_change":     "\uf090	",
+	"ci_activity":      "\ue78c",
 }
 
 func symbolLookup(s string) string {
@@ -121,7 +123,7 @@ func browser(binary string, arg ...string) {
 }
 
 func getHtmlUrl(n *github.Notification) string {
-	fields := strings.Split(*n.Subject.URL, "/")
+	fields := strings.Split(n.GetSubject().GetURL(), "/")
 	return fmt.Sprintf("https://github.com/%s/pull/%s", *n.Repository.FullName, fields[len(fields)-1])
 }
 
