@@ -2,12 +2,10 @@ package main
 
 import (
 	"github.com/alecthomas/kong"
-	"github.com/rs/zerolog/log"
 
+	"github.com/gentoomaniac/github-notifications/pkg/app"
 	gocli "github.com/gentoomaniac/github-notifications/pkg/cli"
-	"github.com/gentoomaniac/github-notifications/pkg/gh"
 	"github.com/gentoomaniac/github-notifications/pkg/logging"
-	"github.com/gentoomaniac/github-notifications/pkg/ui"
 )
 
 var (
@@ -36,16 +34,9 @@ func main() {
 	})
 	logging.Setup(&cli.LoggingConfig)
 
-	github := gh.New(cli.GithubToken)
+	a := app.New(cli.GithubToken)
 
-	notifications, err := github.GetNotifications()
-	if err != nil {
-		log.Error().Err(err).Msg("failed getting notifications")
-	}
-
-	u := ui.Ui{}
-
-	u.Run(notifications)
+	a.Run()
 
 	ctx.Exit(0)
 }

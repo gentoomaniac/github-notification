@@ -8,12 +8,14 @@ import (
 
 func New(token string) *Github {
 	return &Github{
-		client: github.NewClient(nil).WithAuthToken(token),
+		client:  github.NewClient(nil).WithAuthToken(token),
+		context: context.Background(),
 	}
 }
 
 type Github struct {
 	client        *github.Client
+	context       context.Context
 	notifications []*github.Notification
 }
 
@@ -26,7 +28,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	}
 
 	n, res, err := g.client.Activity.ListNotifications(
-		context.Background(),
+		g.context,
 		options,
 	)
 	if err != nil {
@@ -36,7 +38,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 
 	for i := 1; i < res.LastPage; i++ {
 		n, res, err = g.client.Activity.ListNotifications(
-			context.Background(),
+			g.context,
 			options,
 		)
 		if err != nil {
@@ -46,4 +48,10 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	}
 
 	return g.notifications, nil
+}
+
+func (g *Github) GetPr(owner string, repo string, id int) (*github.PullRequest, error) {
+	pr, _, err := g.client.PullRequests.Get(g.context, owner, repo, id)
+
+	return pr, err
 }

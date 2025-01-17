@@ -1,15 +1,20 @@
-package ui
+package app
 
 import (
 	"fmt"
-	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/google/go-github/v67/github"
 	"github.com/rivo/tview"
+	"github.com/rs/zerolog/log"
+
+	"github.com/gentoomaniac/github-notifications/pkg/gh"
 )
+
+const browserBinary = "google-chrome-stable"
 
 var unread = map[bool]string{
 	true:  "\uf52b",
@@ -31,30 +36,46 @@ func symbolLookup(s string) string {
 	return symbol
 }
 
-type Ui struct {
-	selectedIndex int
-
-	notifications *tview.Table
-	details       *tview.Form
+func New(githubToken string) App {
+	return App{
+		ghWrapper:    gh.New(githubToken),
+		pullrequests: make(map[string]*github.PullRequest),
+	}
 }
 
-func (u *Ui) Run(notifications []*github.Notification) {
+type App struct {
+	ghWrapper     *gh.Github
+	notifications *tview.Table
+	details       *tview.Form
+	pullrequests  map[string]*github.PullRequest
+}
+
+func (a *App) Run() {
 	app := tview.NewApplication()
 
-	u.notifications = u.Notifications(notifications)
-	u.details = u.Details()
-	u.updateDetails(notifications[0])
+	notifications, err := a.ghWrapper.GetNotifications()
+	if err != nil {
+		log.Error().Err(err).Msg("failed getting notifications")
+	}
+
+	a.notifications = a.Notifications(notifications)
+	a.details = a.Details()
+	a.updateDetails(notifications[0])
 
 	layout := tview.NewFlex().
-		AddItem(u.notifications, 0, 1, true).
-		AddItem(u.details, 0, 1, false)
+		AddItem(a.notifications, 0, 1, true).
+		AddItem(a.details, 0, 1, false)
 
 	// Shortcuts to navigate the slides.
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			app.Stop()
 			return nil
+		} else if event.Rune() == rune('n') {
+			browser(browserBinary, "https://github.com/notifications")
+			return nil
 		}
+
 		return event
 	})
 
@@ -63,11 +84,11 @@ func (u *Ui) Run(notifications []*github.Notification) {
 	}
 }
 
-func (u *Ui) Details() *tview.Form {
+func (a *App) Details() *tview.Form {
 	form := tview.NewForm().
 		AddTextView("Title", "", 60, 2, true, false).
-		AddTextView("URL", "", 60, 2, true, false)
-	// AddInputField("First name", "", 20, nil, nil).
+		AddTextView("URL", "", 60, 2, true, false).
+		AddTextView("State", "", 20, 2, true, false)
 	// AddInputField("Last name", "", 20, nil, nil).
 	// AddTextArea("Address", "", 40, 0, 0, nil).
 	// AddTextView("Notes", "This is just a demo.\nYou can enter whatever you wish.", 40, 2, true, false).
@@ -77,13 +98,16 @@ func (u *Ui) Details() *tview.Form {
 	return form
 }
 
-func (u *Ui) updateDetails(notification *github.Notification) {
-	u.details.SetTitle(*notification.Repository.FullName)
-	u.details.GetFormItemByLabel("Title").(*tview.TextView).SetText(strings.Join([]string{unread[*notification.Unread], *notification.Subject.Title}, " "))
-	u.details.GetFormItemByLabel("URL").(*tview.TextView).SetText(getHtmlUrl(notification))
+func (a *App) updateDetails(notification *github.Notification) {
+	a.details.SetTitle(*notification.Repository.FullName)
+	a.details.GetFormItemByLabel("Title").(*tview.TextView).SetText(strings.Join([]string{unread[*notification.Unread], *notification.Subject.Title}, " "))
+	a.details.GetFormItemByLabel("URL").(*tview.TextView).SetText(getHtmlUrl(notification))
+	if notification.Subject.GetType() == "PullRequest" && a.pullrequests[notification.GetID()] != nil {
+		a.details.GetFormItemByLabel("URL").(*tview.TextView).SetText(*a.pullrequests[notification.GetID()].State)
+	}
 }
 
-func (u *Ui) Notifications(notifications []*github.Notification) *tview.Table {
+func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 	table := tview.NewTable().SetBorders(false).SetSelectable(true, false)
 	table.SetTitle("Notification")
 	for r := 0; r < len(notifications); r++ {
@@ -106,9 +130,31 @@ func (u *Ui) Notifications(notifications []*github.Notification) *tview.Table {
 	}
 	table.Select(0, 0).SetFixed(1, 1).SetSelectedFunc(func(row int, column int) {
 		// TODO: make configurable
-		go browser("google-chrome-stable", getHtmlUrl(notifications[row]))
+		go browser(browserBinary, getHtmlUrl(notifications[row]))
 	}).SetSelectionChangedFunc(func(row int, column int) {
-		u.updateDetails(notifications[row])
+		a.updateDetails(notifications[row])
+	}).SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == rune('r') {
+			row, _ := table.GetSelection()
+			n := notifications[row]
+
+			id, err := strconv.ParseInt(n.GetID(), 10, 64)
+			if err != nil {
+				log.Error().Err(err).Msg("failed parsing PR id")
+			}
+
+			if n.GetSubject().GetType() == "PullRequest" {
+				pr, err := a.ghWrapper.GetPr(n.GetRepository().GetOwner().GetLogin(), n.GetRepository().GetName(), int(id))
+				if err != nil {
+					fmt.Println(err)
+				}
+				a.pullrequests[n.GetID()] = pr
+			}
+
+			return nil
+		}
+
+		return event
 	})
 
 	return table
@@ -118,7 +164,7 @@ func browser(binary string, arg ...string) {
 	cmd := exec.Command(binary, arg...)
 	err := cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err).Msg("failed starting browser")
 	}
 }
 
