@@ -15,7 +15,7 @@ import (
 	"github.com/gentoomaniac/github-notifications/pkg/gh"
 )
 
-const browserBinary = "google-chrome-stable"
+const urlReplaceString = "{URL}"
 
 var unread = map[bool]string{
 	true:  "\uf52b",
@@ -73,7 +73,7 @@ func (a *App) Run() {
 			app.Stop()
 			return nil
 		} else if event.Rune() == rune('n') {
-			browser(browserBinary, "https://github.com/notifications")
+			browser(a.config.BrowserBinary, strings.ReplaceAll(a.config.BrowserArgs, urlReplaceString, "https://github.com/notifications"))
 			return nil
 		} else if event.Key() == tcell.KeyEsc {
 			a.layout.RemoveItem(a.details)
@@ -155,7 +155,7 @@ func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 		if event.Rune() == rune('o') {
 			row, _ := table.GetSelection()
 			// TODO: make configurable
-			go browser(browserBinary, getHtmlUrl(notifications[row]))
+			go browser(a.config.BrowserBinary, strings.ReplaceAll(a.config.BrowserArgs, urlReplaceString, getHtmlUrl(notifications[row])))
 			return nil
 		}
 
