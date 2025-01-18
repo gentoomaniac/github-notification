@@ -25,7 +25,7 @@ var unread = map[bool]string{
 var symbols = map[string]string{
 	gh.ReviewRequested: "\uf407",
 	gh.Author:          "\uf415",
-	gh.StateChange:     "\uf090	",
+	gh.StateChange:     "\uf090",
 	gh.CiActivity:      "\ue78c",
 }
 
@@ -105,18 +105,18 @@ func (a *App) PullrequestDetails(n *github.Notification, pr *github.PullRequest)
 func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 	table := tview.NewTable().SetBorders(false).SetSelectable(true, false)
 	table.SetTitle("Notification")
-	table.SetBorderPadding(2, 2, 2, 2)
+	table.SetBorderPadding(1, 1, 1, 1)
 	for r := 0; r < len(notifications); r++ {
 		table.SetCell(r, 1,
-			tview.NewTableCell(unread[(*notifications[r].Unread)]).
+			tview.NewTableCell(" "+unread[(*notifications[r].Unread)]+" ").
 				SetAlign(tview.AlignCenter))
 
 		table.SetCell(r, 2,
-			tview.NewTableCell(symbolLookup(*notifications[r].Reason)).
+			tview.NewTableCell(" "+symbolLookup(*notifications[r].Reason)+" ").
 				SetAlign(tview.AlignCenter))
 
 		table.SetCell(r, 3,
-			tview.NewTableCell(*notifications[r].Repository.FullName).
+			tview.NewTableCell(" "+*notifications[r].Repository.FullName+" ").
 				SetAlign(tview.AlignLeft).SetMaxWidth(25))
 
 		table.SetCell(r, 4,
