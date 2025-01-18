@@ -15,22 +15,19 @@ const (
 	CiActivity      = "ci_activity"
 )
 
-func New(classicToken string, finegrainedToken string) *Github {
+func New() *Github {
 	return &Github{
-		classicClient:     github.NewClient(nil).WithAuthToken(classicToken),
-		finegrainedClient: github.NewClient(nil).WithAuthToken(finegrainedToken),
-		context:           context.Background(),
+		context: context.Background(),
 	}
 }
 
 type Github struct {
-	classicClient     *github.Client
-	finegrainedClient *github.Client
-	context           context.Context
-	notifications     []*github.Notification
+	context       context.Context
+	notifications []*github.Notification
 }
 
-func (g *Github) GetNotifications() ([]*github.Notification, error) {
+func (g *Github) GetNotifications(notificationToken string) ([]*github.Notification, error) {
+	client := github.NewClient(nil).WithAuthToken(notificationToken)
 	options := &github.NotificationListOptions{
 		All: false,
 		ListOptions: github.ListOptions{
@@ -38,7 +35,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 		},
 	}
 
-	n, res, err := g.classicClient.Activity.ListNotifications(
+	n, res, err := client.Activity.ListNotifications(
 		g.context,
 		options,
 	)
@@ -48,7 +45,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	g.notifications = n
 
 	for i := 1; i < res.LastPage; i++ {
-		n, res, err = g.classicClient.Activity.ListNotifications(
+		n, res, err = client.Activity.ListNotifications(
 			g.context,
 			options,
 		)
@@ -61,8 +58,9 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	return g.notifications, nil
 }
 
-func (g *Github) GetPr(owner string, repo string, id int) (*github.PullRequest, error) {
-	pr, _, err := g.finegrainedClient.PullRequests.Get(context.Background(), owner, repo, id)
+func (g *Github) GetPr(orgToken string, owner string, repo string, id int) (*github.PullRequest, error) {
+	client := github.NewClient(nil).WithAuthToken(orgToken)
+	pr, _, err := client.PullRequests.Get(context.Background(), owner, repo, id)
 
 	return pr, err
 }

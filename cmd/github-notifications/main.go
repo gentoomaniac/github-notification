@@ -2,9 +2,11 @@ package main
 
 import (
 	"github.com/alecthomas/kong"
+	"github.com/rs/zerolog/log"
 
 	"github.com/gentoomaniac/github-notifications/pkg/app"
 	gocli "github.com/gentoomaniac/github-notifications/pkg/cli"
+	"github.com/gentoomaniac/github-notifications/pkg/config"
 	"github.com/gentoomaniac/github-notifications/pkg/logging"
 )
 
@@ -19,8 +21,9 @@ var (
 var cli struct {
 	logging.LoggingConfig
 
-	GithubClassicToken     string `help:"Github PAT (classic) that has access to notifications" env:"GH_CLASSIC_TOKEN"`
-	GithubFinegrainedToken string `help:"Github PAT (finegrained) that has access to PRs" env:"GH_FINEGRAINED_TOKEN"`
+	GithubNotificationToken string `help:"Github PAT (classic) that has access to notifications" env:"GH_TOKEN"`
+
+	ConfigPath string `help:"path to config file" default:"~/.config/ghn.json" type:"existingfile"`
 
 	Version gocli.VersionFlag `short:"V" help:"Display version."`
 }
@@ -35,15 +38,22 @@ func main() {
 	})
 	logging.Setup(&cli.LoggingConfig)
 
-	a := app.New(cli.GithubClassicToken, cli.GithubFinegrainedToken)
+	conf, err := config.FromFile(cli.ConfigPath)
+	if err != nil {
+		log.Error().Err(err).Msg("failed loading config")
+	}
+
+	if cli.GithubNotificationToken != "" {
+		conf.NotificationToken = cli.GithubNotificationToken
+	}
+
+	a := app.New(conf)
 
 	a.Run()
 
-	// log.Debug().Str("classic", cli.GithubClassicToken).Str("fine", cli.GithubFinegrainedToken).Msg("tokens")
+	// g := gh.New()
 
-	// g := gh.New(cli.GithubClassicToken, cli.GithubFinegrainedToken)
-
-	// pr, err := g.GetPr("gentoomaniac", "github-notification", 1)
+	// pr, err := g.GetPr(conf.OrgTokens["gentoomaniac-net"], "gentoomaniac-net", "testrepo", 1)
 	// if err != nil {
 	// 	log.Error().Err(err).Msg("")
 	// }

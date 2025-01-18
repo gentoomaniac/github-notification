@@ -11,6 +11,7 @@ import (
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
 
+	"github.com/gentoomaniac/github-notifications/pkg/config"
 	"github.com/gentoomaniac/github-notifications/pkg/gh"
 )
 
@@ -36,15 +37,17 @@ func symbolLookup(s string) string {
 	return symbol
 }
 
-func New(classicToken string, finrgrainedToken string) App {
+func New(conf *config.Config) App {
 	return App{
-		ghWrapper:    gh.New(classicToken, finrgrainedToken),
+		ghWrapper:    gh.New(),
+		config:       conf,
 		pullrequests: make(map[string]*github.PullRequest),
 	}
 }
 
 type App struct {
 	ghWrapper     *gh.Github
+	config        *config.Config
 	layout        *tview.Flex
 	notifications *tview.Table
 	details       *tview.Form
@@ -54,7 +57,7 @@ type App struct {
 func (a *App) Run() {
 	app := tview.NewApplication()
 
-	notifications, err := a.ghWrapper.GetNotifications()
+	notifications, err := a.ghWrapper.GetNotifications(a.config.NotificationToken)
 	if err != nil {
 		log.Error().Err(err).Msg("failed getting notifications")
 	}
@@ -132,7 +135,11 @@ func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 			id := fmt.Sprintf("%s%d", n.GetRepository().GetFullName(), subject_id)
 			_, ok := a.pullrequests[id]
 			if !ok {
-				pr, _ := a.ghWrapper.GetPr(n.GetRepository().Owner.GetLogin(), n.GetRepository().GetName(), subject_id)
+				orgToken, ok := a.config.OrgTokens[n.GetRepository().Owner.GetLogin()]
+				if !ok {
+					return
+				}
+				pr, _ := a.ghWrapper.GetPr(orgToken, n.GetRepository().Owner.GetLogin(), n.GetRepository().GetName(), subject_id)
 				a.pullrequests[id] = pr
 			}
 			if a.pullrequests[id] != nil {
