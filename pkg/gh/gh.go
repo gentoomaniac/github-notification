@@ -6,17 +6,28 @@ import (
 	"github.com/google/go-github/v67/github"
 )
 
-func New(token string) *Github {
+const PullRequest = "PullRequest"
+
+const (
+	ReviewRequested = "review_requested"
+	Author          = "author"
+	StateChange     = "state_change"
+	CiActivity      = "ci_activity"
+)
+
+func New(classicToken string, finegrainedToken string) *Github {
 	return &Github{
-		client:  github.NewClient(nil).WithAuthToken(token),
-		context: context.Background(),
+		classicClient:     github.NewClient(nil).WithAuthToken(classicToken),
+		finegrainedClient: github.NewClient(nil).WithAuthToken(finegrainedToken),
+		context:           context.Background(),
 	}
 }
 
 type Github struct {
-	client        *github.Client
-	context       context.Context
-	notifications []*github.Notification
+	classicClient     *github.Client
+	finegrainedClient *github.Client
+	context           context.Context
+	notifications     []*github.Notification
 }
 
 func (g *Github) GetNotifications() ([]*github.Notification, error) {
@@ -27,7 +38,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 		},
 	}
 
-	n, res, err := g.client.Activity.ListNotifications(
+	n, res, err := g.classicClient.Activity.ListNotifications(
 		g.context,
 		options,
 	)
@@ -37,7 +48,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 	g.notifications = n
 
 	for i := 1; i < res.LastPage; i++ {
-		n, res, err = g.client.Activity.ListNotifications(
+		n, res, err = g.classicClient.Activity.ListNotifications(
 			g.context,
 			options,
 		)
@@ -51,7 +62,7 @@ func (g *Github) GetNotifications() ([]*github.Notification, error) {
 }
 
 func (g *Github) GetPr(owner string, repo string, id int) (*github.PullRequest, error) {
-	pr, _, err := g.client.PullRequests.Get(g.context, owner, repo, id)
+	pr, _, err := g.finegrainedClient.PullRequests.Get(context.Background(), owner, repo, id)
 
 	return pr, err
 }
