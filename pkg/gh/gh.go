@@ -2,6 +2,7 @@ package gh
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/go-github/v67/github"
 )
@@ -13,6 +14,7 @@ const (
 	Author          = "author"
 	StateChange     = "state_change"
 	CiActivity      = "ci_activity"
+	Subscribed      = "subscribed"
 )
 
 func New() *Github {
@@ -29,7 +31,8 @@ type Github struct {
 func (g *Github) GetNotifications(notificationToken string) ([]*github.Notification, error) {
 	client := github.NewClient(nil).WithAuthToken(notificationToken)
 	options := &github.NotificationListOptions{
-		All: false,
+		All:   true,
+		Since: time.Now().Add(-time.Hour * 24),
 		ListOptions: github.ListOptions{
 			Page: 0,
 		},

@@ -51,15 +51,5 @@ func main() {
 
 	a.Run()
 
-	// g := gh.New()
-
-	// pr, err := g.GetPr(conf.OrgTokens["gentoomaniac-net"], "gentoomaniac-net", "testrepo", 1)
-	// if err != nil {
-	// 	log.Error().Err(err).Msg("")
-	// }
-
-	// json, _ := json.Marshal(pr)
-	// fmt.Println(string(json))
-
 	ctx.Exit(0)
 }

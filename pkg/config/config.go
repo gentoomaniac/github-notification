@@ -7,7 +7,7 @@ import (
 
 type Config struct {
 	BrowserBinary     string            `json:"browserBinary"`
-	BrowserArgs       string            `json:"browserArgs"`
+	BrowserArgs       []string          `json:"browserArgs"`
 	NotificationToken string            `json:"notificationToken"`
 	OrgTokens         map[string]string `json:"orgTokens"`
 }

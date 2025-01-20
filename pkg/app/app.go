@@ -27,6 +27,7 @@ var symbols = map[string]string{
 	gh.Author:          "\uf415",
 	gh.StateChange:     "\uf090",
 	gh.CiActivity:      "\ue78c",
+	gh.Subscribed:      "\uf441",
 }
 
 func symbolLookup(s string) string {
@@ -73,7 +74,7 @@ func (a *App) Run() {
 			app.Stop()
 			return nil
 		} else if event.Rune() == rune('n') {
-			browser(a.config.BrowserBinary, strings.ReplaceAll(a.config.BrowserArgs, urlReplaceString, "https://github.com/notifications"))
+			browser(a.config.BrowserBinary, a.config.BrowserArgs, "https://github.com/notifications")
 			return nil
 		} else if event.Key() == tcell.KeyEsc {
 			a.layout.RemoveItem(a.details)
@@ -89,16 +90,13 @@ func (a *App) Run() {
 
 func (a *App) PullrequestDetails(n *github.Notification, pr *github.PullRequest) *tview.Form {
 	form := tview.NewForm().
+		AddTextView("Author", pr.GetUser().GetLogin(), 20, 2, true, false).
 		AddTextView("State", pr.GetState(), 20, 2, true, false).
+		AddTextView("Mergable", strconv.FormatBool(pr.GetMergeable()), 20, 2, true, false).
 		AddTextView("Body", pr.GetBody(), 60, 5, true, true).
 		AddTextView("URL", getHtmlUrl(n), 60, 2, true, false)
 
-	// AddInputField("Last name", "", 20, nil, nil).
-	// AddTextArea("Address", "", 40, 0, 0, nil).
-	// AddTextView("Notes", "This is just a demo.\nYou can enter whatever you wish.", 40, 2, true, false).
-	// AddCheckbox("Age 18+", false, nil).
-	// AddPasswordField("Password", "", 10, '*', nil)
-	form.SetBorder(true).SetTitle(fmt.Sprintf("#%d %s", pr.GetID(), pr.GetTitle())).SetTitleAlign(tview.AlignLeft)
+	form.SetBorder(true).SetTitle(fmt.Sprintf("#%d %s", pr.GetNumber(), pr.GetTitle())).SetTitleAlign(tview.AlignLeft)
 	return form
 }
 
@@ -155,7 +153,7 @@ func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 		if event.Rune() == rune('o') {
 			row, _ := table.GetSelection()
 			// TODO: make configurable
-			go browser(a.config.BrowserBinary, strings.ReplaceAll(a.config.BrowserArgs, urlReplaceString, getHtmlUrl(notifications[row])))
+			go browser(a.config.BrowserBinary, a.config.BrowserArgs, getHtmlUrl(notifications[row]))
 			return nil
 		}
 
@@ -165,8 +163,13 @@ func (a *App) Notifications(notifications []*github.Notification) *tview.Table {
 	return table
 }
 
-func browser(binary string, arg ...string) {
-	cmd := exec.Command(binary, arg...)
+func browser(binary string, args []string, url string) {
+	var renderedArgs []string
+	for _, arg := range args {
+		renderedArgs = append(renderedArgs, strings.ReplaceAll(arg, urlReplaceString, url))
+	}
+
+	cmd := exec.Command(binary, renderedArgs...)
 	err := cmd.Start()
 	if err != nil {
 		log.Error().Err(err).Msg("failed starting browser")
