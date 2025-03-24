@@ -7,7 +7,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/google/go-github/v67 v67.0.0
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 )
 
 require (
