@@ -10,7 +10,7 @@ before:
 builds:
   - main: ./cmd/github-notifications
     id: "github-notifications"
-    binary: "template-application"
+    binary: "ghn"
     ldflags:
       - -s
       - -w
