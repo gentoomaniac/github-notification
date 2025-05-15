@@ -3,7 +3,7 @@ module github.com/gentoomaniac/github-notifications
 go 1.22
 
 require (
-	github.com/alecthomas/kong v1.8.1
+	github.com/alecthomas/kong v1.11.0
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/google/go-github/v67 v67.0.0
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
